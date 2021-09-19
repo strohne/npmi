@@ -21,6 +21,11 @@
 #' @export
 count_pairs <- function(data, upper=F, diag=F) {
 
+  # Add weight
+  if (!("weight" %in% colnames(data))) {
+    data$weight <- 1
+  }
+
   # Convert to matrix
   data$item <- as.factor(data$item)
   data$feature <- as.factor(data$feature)
