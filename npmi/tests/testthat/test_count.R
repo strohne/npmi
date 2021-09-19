@@ -11,14 +11,15 @@ test_that("count_pairs equals pairwise_count", {
   # Use widyr::pairwise_count
   data_expected <- data %>%
     widyr::pairwise_count(feature,id,upper=T, diag=T) %>%
-    complete(item1,item2,fill=list(n=0)) %>%
-    arrange(item1,item2)
+    dplyr::rename(feature1=item1,feature2=item2) %>%
+    complete(feature1,feature2,fill=list(n=0)) %>%
+    arrange(feature1,feature2)
 
   # Use npmi::count_pairs
   data_actual <- data %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
-    arrange(item1,item2)
+    arrange(feature1,feature2)
 
   testthat::expect_identical(data_actual,data_expected)
 })

@@ -38,8 +38,8 @@ count_pairs <- function(data) {
   # Convert to matrix
   data <- Matrix::sparseMatrix(
     i = as.numeric(data$item),
-    j=as.numeric(data$feature),
-    x=data$weight,
+    j = as.numeric(data$feature),
+    x = data$weight,
     dimnames=list(
       levels(data$item),
       levels(data$feature)
@@ -52,7 +52,7 @@ count_pairs <- function(data) {
   # To data.frame
   pairs <- as.data.frame(Matrix::summary(pairs))
   attr(pairs,"header") <- NULL
-#
+
 #   if (!upper) {
 #     pairs <- filter(pairs, i <= j)
 #   }
@@ -61,20 +61,20 @@ count_pairs <- function(data) {
 #   }
 
   # Rename columns
-  colnames(pairs) <- c("item1","item2","n")
+  colnames(pairs) <- c("feature1","feature2","n")
 
   # Add labels
-  pairs$item1 <- factor(pairs$item1,levels=c(1:length(features)),labels=features)
-  pairs$item2 <- factor(pairs$item2,levels=c(1:length(features)),labels=features)
+  pairs$feature1 <- factor(pairs$feature1,levels=c(1:length(features)),labels=features)
+  pairs$feature2 <- factor(pairs$feature2,levels=c(1:length(features)),labels=features)
 
   # Complete
   pairs <- pairs %>%
     tibble::as_tibble() %>%
-    tidyr::complete(item1,item2,fill=list(n=0))
+    tidyr::complete(feature1,feature2,fill=list(n=0))
 
   # Convert labels to character
-  pairs$item1 <- as.character(pairs$item1)
-  pairs$item2 <- as.character(pairs$item2)
+  pairs$feature1 <- as.character(pairs$feature1)
+  pairs$feature2 <- as.character(pairs$feature2)
 
 
   return(pairs)
