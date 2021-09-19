@@ -1,0 +1,1 @@
+This folder contains files for developing the package...and will be deleted in the end.
