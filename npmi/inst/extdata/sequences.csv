@@ -1,0 +1,17 @@
+feature_prev;feature_next;n
+A;A;11
+A;B;5
+A;C;10
+A;D;4
+B;A;4
+B;B;5
+B;C;5
+B;D;4
+C;A;9
+C;B;4
+C;C;10
+C;D;4
+D;A;4
+D;B;5
+D;C;3
+D;D;4

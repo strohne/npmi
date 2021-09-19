@@ -4,11 +4,15 @@
 \alias{count_pairs}
 \title{Count cooccurrence of features in items}
 \usage{
-count_pairs(data, upper = F, diag = F)
+count_pairs(data)
 }
 \arguments{
 \item{data}{Data table containin the columns item, feature and optionally weight.
-The weight column will be initialized with 1 if missing.}
+- item contains the ID of a document (e.g. a comment)
+- feature contains a category  (e.g. the topic of the comment)
+- weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?). Will be initialized with 1 if missing.
+Items with multiple features should occur multiple times in the data table.
+Make sure not to include duplicates (that's where the weight kicks in, use it!).}
 }
 \value{
 A data table

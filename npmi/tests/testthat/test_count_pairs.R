@@ -1,6 +1,7 @@
 test_that("count_pairs equals pairwise_count", {
 
   library(dplyr)
+  library(tidyr)
   library(readr)
   library(widyr)
   library(npmi)
@@ -9,14 +10,15 @@ test_that("count_pairs equals pairwise_count", {
 
   # Use widyr::pairwise_count
   data_expected <- data %>%
-    widyr::pairwise_count(feature,id,upper=F, diag=F) %>%
+    widyr::pairwise_count(feature,id,upper=T, diag=T) %>%
+    complete(item1,item2,fill=list(n=0)) %>%
     arrange(item1,item2)
 
   # Use npmi::count_pairs
   data_actual <- data %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
-    as_tibble()
+    arrange(item1,item2)
 
   testthat::expect_identical(data_actual,data_expected)
 })
@@ -32,14 +34,116 @@ test_that("count_pairs equals content of csv-file", {
   data_expected <- read_csv2(system.file("extdata", "pairs.csv", package = "npmi"))
 
   # Remove spec from loaded file
-  data_expected <- as_tibble(data_expected)
-  attr(data_expected,"spec") <- NULL
+  data_expected <- data.frame(data_expected)
 
   # Count pairs
   data_actual <- threads %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
-    as_tibble()
+    data.frame()
 
   testthat::expect_identical(data_actual,data_expected)
 })
+
+
+test_that("count_sequences equals the tidyverse equivalent", {
+
+  library(dplyr)
+  library(readr)
+  library(npmi)
+
+  threads <- read_csv2(system.file("extdata", "threads.csv", package = "npmi"))
+
+  # Get sequences of items
+  items <- threads %>%
+    distinct(id,parent_id) %>%
+    na.omit()
+
+  items <- items %>%
+    arrange(id) %>%
+    group_by(parent_id) %>%
+    mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>%
+    ungroup()
+
+  threads <- threads %>%
+    left_join(select(items,id,id_prev),by="id")
+
+  rm(items)
+
+  # Distinct
+  threads <- threads %>%
+    distinct(item=id,feature,item_prev = id_prev)
+
+
+  # Expected feature sequences
+  features_expected <- threads %>%
+    rename(item_next=item,feature_next=feature) %>%
+
+    inner_join(
+      select(threads,item_prev=item,feature_prev=feature),
+      by=c("item_prev")
+    ) %>%
+    distinct(item_next,feature_next,item_prev,feature_prev) %>%
+    count(feature_prev,feature_next) %>%
+    tidyr::complete(feature_prev,feature_next,fill=list(n=0)) %>%
+    arrange(feature_prev,feature_next)  %>%
+    data.frame()
+
+
+  # Actual feature sequences
+  features_actual <- threads %>%
+    count_sequences() %>%
+    arrange(feature_prev,feature_next) %>%
+    data.frame()
+
+  # Compare
+  testthat::expect_identical(features_actual,features_expected)
+})
+
+test_that("count_sequences equals a csv file", {
+
+  library(dplyr)
+  library(readr)
+  library(npmi)
+
+  threads <- read_csv2(system.file("extdata", "threads.csv", package = "npmi"))
+
+  # Get sequences of items
+  items <- threads %>%
+    distinct(id,parent_id) %>%
+    na.omit()
+
+  items <- items %>%
+    arrange(id) %>%
+    group_by(parent_id) %>%
+    mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>%
+    ungroup()
+
+  threads <- threads %>%
+    left_join(select(items,id,id_prev),by="id")
+
+  rm(items)
+
+  # Distinct
+  threads <- threads %>%
+    distinct(item=id,feature,item_prev = id_prev)
+
+
+  # Expected feature sequences
+  data_expected <- read_csv2(system.file("extdata", "sequences.csv", package = "npmi"))
+
+  # Remove spec from loaded file
+  data_expected <- data.frame(data_expected)
+
+  # Actual feature sequences
+  data_actual <- threads %>%
+    count_sequences() %>%
+    arrange(feature_prev,feature_next) %>%
+    data.frame()
+
+
+  # Compare
+  testthat::expect_identical(data_actual,data_expected)
+})
+
+

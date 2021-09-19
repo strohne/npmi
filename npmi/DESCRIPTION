@@ -17,5 +17,7 @@ Config/testthat/edition: 3
 VignetteBuilder: knitr
 Imports: 
     data.table,
-    Matrix
+    Matrix,
+    tidyr,
+    tibble
 RoxygenNote: 7.1.1
