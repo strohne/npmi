@@ -18,3 +18,4 @@ VignetteBuilder: knitr
 Imports: 
     data.table,
     Matrix
+RoxygenNote: 7.1.1
