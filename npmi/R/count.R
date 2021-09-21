@@ -49,6 +49,7 @@ count_pairs <- function(data) {
   # Pairwise count
   pairs <- Matrix::t(data) %*% (data > 0)
 
+  diag(pairs) <- 0
 
   # To data.frame
   pairs <- as.data.frame(Matrix::summary(pairs))
