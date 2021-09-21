@@ -30,21 +30,26 @@ count_pairs <- function(data) {
     data$weight <- 1
   }
 
-  # Convert to factors
-  data$item <- as.factor(data$item)
-  data$feature <- as.factor(data$feature)
-  features <- levels(data$feature)
+  # # Convert to factors
+  # data$item <- as.factor(data$item)
+  # data$feature <- as.factor(data$feature)
+  # features <- levels(data$feature)
 
   # Convert to matrix
+  # data <- Matrix::sparseMatrix(
+  #   i = as.numeric(data$item),
+  #   j = as.numeric(data$feature),
+  #   x = data$weight,
+  #   dimnames=list(
+  #     levels(data$item),
+  #     levels(data$feature)
+  #     )
+  #   )
   data <- Matrix::sparseMatrix(
-    i = as.numeric(data$item),
-    j = as.numeric(data$feature),
-    x = data$weight,
-    dimnames=list(
-      levels(data$item),
-      levels(data$feature)
-      )
-    )
+    i = data$item,
+    j = data$feature,
+    x = data$weight
+  )
 
   # Pairwise count
   pairs <- Matrix::t(data) %*% (data > 0)
@@ -65,18 +70,18 @@ count_pairs <- function(data) {
   # Rename columns
   colnames(pairs) <- c("feature1","feature2","n")
 
-  # Add labels
-  pairs$feature1 <- factor(pairs$feature1,levels=c(1:length(features)),labels=features)
-  pairs$feature2 <- factor(pairs$feature2,levels=c(1:length(features)),labels=features)
+  # # Add labels
+  # pairs$feature1 <- factor(pairs$feature1,levels=c(1:length(features)),labels=features)
+  # pairs$feature2 <- factor(pairs$feature2,levels=c(1:length(features)),labels=features)
 
   # Complete
   pairs <- pairs %>%
     tibble::as_tibble() %>%
     tidyr::complete(feature1,feature2,fill=list(n=0))
 
-  # Convert labels to character
-  pairs$feature1 <- as.character(pairs$feature1)
-  pairs$feature2 <- as.character(pairs$feature2)
+  # # Convert labels to character
+  # pairs$feature1 <- as.character(pairs$feature1)
+  # pairs$feature2 <- as.character(pairs$feature2)
 
 
   return(pairs)
@@ -103,8 +108,8 @@ count_sequences <- function(data) {
   }
   data <- data.table::copy(data)
 
-  # Convert to factor (in order to later complete combinations)
-  data$feature <- as.factor(data$feature)
+  # # Convert to factor (in order to later complete combinations)
+  # data$feature <- as.factor(data$feature)
 
   # Distinct item-feature-combinations
   data <- unique(data[,.(item,item_prev,feature)])
@@ -134,9 +139,9 @@ count_sequences <- function(data) {
   #                 on=.(feature, feature_prev)]
   # setnafill(data, fill = 0, cols = 'n')
 
-  # Convert labels to character
-  data$feature_prev <- as.character(data$feature_prev)
-  data$feature_next <- as.character(data$feature_next)
+  # # Convert labels to character
+  # data$feature_prev <- as.character(data$feature_prev)
+  # data$feature_next <- as.character(data$feature_next)
 
   return(data)
 }
