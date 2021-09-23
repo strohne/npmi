@@ -10,7 +10,7 @@ test_that("count_pairs equals pairwise_count", {
 
   # Use widyr::pairwise_count
   data_expected <- data %>%
-    widyr::pairwise_count(feature,id,wt = weight, upper=T, diag=F) %>%
+    widyr::pairwise_count(feature,id,wt = weight, upper=T, diag=T) %>%
     dplyr::rename(feature1=item1,feature2=item2) %>%
     complete(feature1,feature2,fill=list(n=0)) %>%
     arrange(feature1,feature2)

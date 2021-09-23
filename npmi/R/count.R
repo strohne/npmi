@@ -11,7 +11,10 @@
 #   Install Package:           'Ctrl + Shift + B'
 #   Check Package:             'Ctrl + Shift + E'
 #   Test Package:              'Ctrl + Shift + T'
-
+#
+# Some useful commands:
+# usethis::use_package to include a package in the package
+#
 
 #' Count cooccurrence of features in items
 #'
@@ -21,6 +24,8 @@
 #'             - weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?). Will be initialized with 1 if missing.
 #'             Items with multiple features should occur multiple times in the data table.
 #'             Make sure not to include duplicates (that's where the weight kicks in, use it!).
+#'             The feature and item columns can contain numeric IDs, character strings or factors.
+#'             Provide character strings or factors to complete combinations not found in the data.
 #' @return A tibble
 #' @export
 count_pairs <- function(data) {
@@ -30,21 +35,18 @@ count_pairs <- function(data) {
     data$weight <- 1
   }
 
-  # # Convert to factors
-  # data$item <- as.factor(data$item)
-  # data$feature <- as.factor(data$feature)
-  # features <- levels(data$feature)
+  # Convert to numeric
+  if (!is.numeric(data$item))
+    data$item <- as.numeric(as.factor(data$item))
+
+  features <- NULL
+  if (!is.numeric(data$feature)) {
+    data$feature <- as.factor(data$feature)
+    features <- levels(data$feature)
+    data$feature <- as.numeric(data$feature)
+  }
 
   # Convert to matrix
-  # data <- Matrix::sparseMatrix(
-  #   i = as.numeric(data$item),
-  #   j = as.numeric(data$feature),
-  #   x = data$weight,
-  #   dimnames=list(
-  #     levels(data$item),
-  #     levels(data$feature)
-  #     )
-  #   )
   data <- Matrix::sparseMatrix(
     i = data$item,
     j = data$feature,
@@ -54,7 +56,7 @@ count_pairs <- function(data) {
   # Pairwise count
   pairs <- Matrix::t(data) %*% (data > 0)
 
-  diag(pairs) <- 0
+  #diag(pairs) <- 0
 
   # To data.frame
   pairs <- as.data.frame(Matrix::summary(pairs))
@@ -70,18 +72,23 @@ count_pairs <- function(data) {
   # Rename columns
   colnames(pairs) <- c("feature1","feature2","n")
 
-  # # Add labels
-  # pairs$feature1 <- factor(pairs$feature1,levels=c(1:length(features)),labels=features)
-  # pairs$feature2 <- factor(pairs$feature2,levels=c(1:length(features)),labels=features)
+  # Add labels
+  if (!is.null(features)) {
+    pairs$feature1 <- factor(pairs$feature1,levels=c(1:length(features)),labels=features)
+    pairs$feature2 <- factor(pairs$feature2,levels=c(1:length(features)),labels=features)
+  }
 
   # Complete
   pairs <- pairs %>%
     tibble::as_tibble() %>%
     tidyr::complete(feature1,feature2,fill=list(n=0))
 
-  # # Convert labels to character
-  # pairs$feature1 <- as.character(pairs$feature1)
-  # pairs$feature2 <- as.character(pairs$feature2)
+
+  # Convert labels to character
+  if (!is.null(features)) {
+     pairs$feature1 <- as.character(pairs$feature1)
+     pairs$feature2 <- as.character(pairs$feature2)
+  }
 
 
   return(pairs)
@@ -102,14 +109,22 @@ count_pairs <- function(data) {
 #' @import data.table
 count_sequences <- function(data) {
 
+  # # Add weight
+  # if (!("weight" %in% colnames(data))) {
+  #   data$weight <- 1
+  # }
+
   # Convert to data.table
-  if (!data.table::is.data.table(data)) {
-    data.table::setDT(data)
-  }
+  data.table::setDT(data)
   data <- data.table::copy(data)
 
   # # Convert to factor (in order to later complete combinations)
-  # data$feature <- as.factor(data$feature)
+  # features <- NULL
+  # if (!is.numeric(data$feature)) {
+  #   data$feature <- as.factor(data$feature)
+  #   features <- levels(data$feature)
+  #   data$feature <- as.numeric(data$feature)
+  # }
 
   # Distinct item-feature-combinations
   data <- unique(data[,.(item,item_prev,feature)])
@@ -119,7 +134,6 @@ count_sequences <- function(data) {
                on = "item_prev", nomatch = 0]
 
   # Count
-  #data <- unique(data, by = c("item","feature","item_prev","feature_prev"))
   data <- data[, .(n=.N), by=c("feature", "feature_prev")]
 
   # Rename columns
@@ -130,7 +144,6 @@ count_sequences <- function(data) {
     tibble::as_tibble() %>%
     tidyr::complete(feature_prev,feature_next,fill=list(n=0))
 
-
   # Alternative using data.table (but empty factors are ommitted)
   # data <- data[CJ(feature = feature_prev,
   #                 feature_prev = feature_prev,
@@ -140,18 +153,10 @@ count_sequences <- function(data) {
   # setnafill(data, fill = 0, cols = 'n')
 
   # # Convert labels to character
-  # data$feature_prev <- as.character(data$feature_prev)
-  # data$feature_next <- as.character(data$feature_next)
+  # if (!is.null(features)) {
+  #   data$feature_prev <- as.character(data$feature_prev)
+  #   data$feature_next <- as.character(data$feature_next)
+  # }
 
   return(data)
 }
-
-
-
-#' Add a column containing the ID of the previous item
-#'
-#' (not implemented yet)
-add_prev <- function(data) {
-
-}
-

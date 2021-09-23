@@ -1,12 +1,12 @@
 Package: npmi
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Find overly rare or frequent combinations
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Jakob Jünger
+Maintainer: <jakob.juenger@uni-muenster.de>
+Description: Find cooccurrence and sequences in zero inflated data 
+    where observations are not independent from each other.
+License: MIT
 Encoding: UTF-8
 LazyData: true
 Suggests: 
@@ -19,5 +19,6 @@ Imports:
     data.table,
     Matrix,
     tidyr,
-    tibble
+    tibble,
+    furrr
 RoxygenNote: 7.1.1
