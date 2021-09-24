@@ -11,15 +11,15 @@ test_that("count_pairs equals pairwise_count", {
   # Use widyr::pairwise_count
   data_expected <- data %>%
     widyr::pairwise_count(feature,id,wt = weight, upper=T, diag=T) %>%
-    dplyr::rename(feature1=item1,feature2=item2) %>%
-    complete(feature1,feature2,fill=list(n=0)) %>%
-    arrange(feature1,feature2)
+    dplyr::rename(feature_source=item1,feature_target=item2) %>%
+    complete(feature_source,feature_target,fill=list(n=0)) %>%
+    arrange(feature_source,feature_target)
 
   # Use npmi::count_pairs
   data_actual <- data %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
-    arrange(feature1,feature2)
+    arrange(feature_source,feature_target)
 
   testthat::expect_identical(data_actual,data_expected)
 })
@@ -41,7 +41,8 @@ test_that("count_pairs equals content of csv-file", {
   data_actual <- threads %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
-    data.frame()
+    data.frame() %>%
+    rename(feature1=feature_source,feature2=feature_target)
 
   testthat::expect_identical(data_actual,data_expected)
 })
@@ -78,23 +79,23 @@ test_that("count_sequences equals the tidyverse equivalent", {
 
   # Expected feature sequences
   features_expected <- threads %>%
-    rename(item_next=item,feature_next=feature) %>%
+    rename(item_next=item,feature_target=feature) %>%
 
     inner_join(
-      select(threads,item_prev=item,feature_prev=feature),
+      select(threads,item_prev=item,feature_source=feature),
       by=c("item_prev")
     ) %>%
-    distinct(item_next,feature_next,item_prev,feature_prev) %>%
-    count(feature_prev,feature_next) %>%
-    tidyr::complete(feature_prev,feature_next,fill=list(n=0)) %>%
-    arrange(feature_prev,feature_next)  %>%
+    distinct(item_next,feature_target,item_prev,feature_source) %>%
+    count(feature_source,feature_target) %>%
+    tidyr::complete(feature_source,feature_target,fill=list(n=0)) %>%
+    arrange(feature_source,feature_target)  %>%
     data.frame()
 
 
   # Actual feature sequences
   features_actual <- threads %>%
     count_sequences() %>%
-    arrange(feature_prev,feature_next) %>%
+    arrange(feature_source,feature_target) %>%
     data.frame()
 
   # Compare
@@ -134,12 +135,13 @@ test_that("count_sequences equals a csv file", {
   data_expected <- read_csv2(system.file("extdata", "sequences.csv", package = "npmi"))
 
   # Remove spec from loaded file
-  data_expected <- data.frame(data_expected)
+  data_expected <- data.frame(data_expected) %>%
+    rename(feature_source=feature_prev, feature_target=feature_next)
 
   # Actual feature sequences
   data_actual <- threads %>%
     count_sequences() %>%
-    arrange(feature_prev,feature_next) %>%
+    arrange(feature_source,feature_target) %>%
     data.frame()
 
 
