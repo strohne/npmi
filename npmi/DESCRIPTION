@@ -20,5 +20,6 @@ Imports:
     Matrix,
     tidyr,
     tibble,
-    furrr
+    furrr,
+    ggplot2
 RoxygenNote: 7.1.1
