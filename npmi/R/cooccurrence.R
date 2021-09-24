@@ -48,12 +48,14 @@ get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
 
     # Share of feature in all items
     # -> propability of feature in an item
+    items_count <- length(unique(data[,item]))
+
     features <- copy(data)
     features <- features[, .(n_items = sum(weight, na.rm = T)), by = feature]
-    features[, p_items := n_items / length(unique(data[,item]))]
+    features[, p_items := n_items / items_count]
 
     # Share of items with cooccurring feature in all items
-    pairs[, p := n / length(unique(data[,item]))]
+    pairs[, p := n / items_count]
     pairs <- pairs[features[, .(feature_source = feature,n_source=n_items,p_source=p_items)],on="feature_source"]
     pairs <- pairs[features[, .(feature_target = feature,n_target=n_items,p_target=p_items)],on="feature_target"]
 
@@ -69,10 +71,10 @@ get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
   if (npmi) {
 
     # Relative Risk
-    pairs[, irr := (p / (p_target * p_source))]
+    pairs[, ratio := (p / (p_target * p_source))]
 
     # PMI
-    pairs[, pmi := log2(irr)]
+    pairs[, pmi := log2(ratio)]
     pairs[, npmi := pmi / ( -log2(p))]
     pairs[, npmi := ifelse(is.nan(npmi),-1,npmi)]
 
@@ -110,7 +112,7 @@ shuffle_cooccurrence <- function(data, metrics = T, npmi = F, .progress = NULL) 
   data[, feature := sample(feature,length(feature),replace=F)]
   data <- unique(data, by = c("item", "feature"))
 
-  get_cooccurrence(data, metrics,npmi,.progress)
+  get_cooccurrence(data, metrics, npmi, .progress)
 }
 
 
@@ -180,9 +182,9 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
   # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond_source & p_cond_target)
   # -> if value.mean == 0 -> too few samples, should be avoided
   pairs <- pairs %>%
-    dplyr::mutate(boot_ratio = (value + smoothing) / (value_mean + smoothing)) %>%
-    dplyr::mutate(boot_pmi =   ifelse(boot_ratio != 0, log2(boot_ratio),-Inf)) %>%
-    dplyr::mutate(boot_npmi =  ifelse(boot_pmi != -Inf, boot_pmi / -log2(value_mean + smoothing),-1)) %>%
+    dplyr::mutate(ratio = (value + smoothing) / (value_mean + smoothing)) %>%
+    dplyr::mutate(pmi =   ifelse(ratio != 0, log2(ratio),-Inf)) %>%
+    dplyr::mutate(npmi =  ifelse(pmi != -Inf, pmi / -log2(value_mean + smoothing),-1)) %>%
 
     # Significance compared to CI
     dplyr::mutate(sig_hi = (value > value_hi) ) %>%

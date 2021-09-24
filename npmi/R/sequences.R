@@ -9,7 +9,8 @@
 #'             Make sure not to include duplicates (that's where the weight kicks in, use it!).
 #'             The feature and item columns can contain numeric IDs, character strings or factors.
 #'             Provide character strings or factors to complete combinations not found in the data.
-#' @param metrics T|F Whether to calculate p, p_cond_source, p_cond_target
+#' @param metrics T|F Whether to calculate p, p_cond_source, p_cond_target.
+#'                    Source is the previous item and target the next item in a sequence.
 #' @param npmi T|F Whether to calculate npmi (without resampling)
 #' @return A tibble
 #' @import data.table
@@ -21,7 +22,6 @@ get_sequences <- function(data, metrics = T, npmi = F,.progress = NULL) {
 
   # Convert to data.table
   setDT(data)
-
   data <- unique(data, by = c("item", "item_prev", "feature"))
 
   # Count sequences
@@ -29,27 +29,29 @@ get_sequences <- function(data, metrics = T, npmi = F,.progress = NULL) {
   setDT(pairs)
 
   if (metrics) {
+    items_count <- length(unique(data[,item]))
     features <- copy(data)
     features <- features[, .(n_items = .N), by = "feature"]
-    features[, p_items := n_items / n_distinct(data[, item])]
+    #features <- features[, .(n_items = sum(weight, na.rm = T)), by = feature]
+    features[, p_items := n_items / items_count]
+
 
     # Maximum number of possible sequences
-    nmax <- data[!is.na(item_prev)]
-    nmax <- nrow(unique(nmax, by = "item"))
+    seq_count <- length(unique(data[!is.na(item_prev),item]))
 
     # Share of all possible sequences
-    pairs[, p := n / nmax]
-    pairs <- pairs[features[, .(feature_target = feature,n_next=n_items,p_next=p_items)],on="feature_target"]
-    pairs <- pairs[features[, .(feature_source = feature,n_prev=n_items,p_prev=p_items)],on="feature_source"]
+    pairs[, p := n / seq_count]
+    pairs <- pairs[features[, .(feature_target = feature,n_target=n_items,p_target=p_items)],on="feature_target"]
+    pairs <- pairs[features[, .(feature_source = feature,n_source=n_items,p_source=p_items)],on="feature_source"]
 
     # Conditional probability
-    pairs[, p_cond_next := p / p_next]
-    pairs[, p_cond_prev := p / p_prev]
+    pairs[, p_cond_target := p / p_target]
+    pairs[, p_cond_source := p / p_source]
   }
 
   # NPMI
   if (npmi) {
-    pairs[, ratio := (p / (p_next * p_prev))]
+    pairs[, ratio := (p / (p_source * p_target))]
     pairs[, pmi := log2(ratio)]
     pairs[, npmi := pmi / ( -log2(p))]
     pairs[, npmi := ifelse(is.nan(npmi),-1,npmi)]
@@ -158,9 +160,9 @@ resample_sequences <- function(data, trials=10000, smoothing=0) {
   # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond_source & p_cond_target)
   # -> if value.mean == 0 -> too few samples, should be avoided
   pairs <- pairs %>%
-    dplyr::mutate(boot_ratio = (value + smoothing) / (value_mean + smoothing)) %>%
-    dplyr::mutate(boot_pmi =   ifelse(boot_ratio != 0, log2(boot_ratio),-Inf)) %>%
-    dplyr::mutate(boot_npmi =  ifelse(boot_pmi != -Inf, boot_pmi / -log2(value_mean + smoothing),-1)) %>%
+    dplyr::mutate(ratio = (value + smoothing) / (value_mean + smoothing)) %>%
+    dplyr::mutate(pmi =   ifelse(ratio != 0, log2(ratio),-Inf)) %>%
+    dplyr::mutate(npmi =  ifelse(pmi != -Inf, pmi / -log2(value_mean + smoothing),-1)) %>%
 
     # Significance compared to CI
     dplyr::mutate(sig_hi = (value > value_hi) ) %>%

@@ -68,16 +68,16 @@ pairs_resampled <- threads %>%
 
 ```{r}
 pairs_resampled %>% 
-  filter(metric=="p_cond_prev") %>% 
-  select(feature_prev, feature_next, value, value_mean, boot_ratio, boot_npmi,sig) %>% 
+  filter(metric=="p_cond_source") %>% 
+  select(feature_source, feature_target, value, value_mean, ratio, npmi,sig) %>% 
   print()
 
 
 #Plot npmi matrix
 pairs_resampled %>% 
-  filter(metric=="p_cond_prev") %>% 
+  filter(metric=="p_cond_source") %>% 
   filter(sig == T) %>% 
-  select(source=feature_prev,target=feature_next,value=boot_npmi) %>% 
+  select(source=feature_source,target=feature_target,value=npmi) %>% 
   #mutate(source=as.factor(source),target=as.factor(target)) %>% 
   matrixmap() +
   theme_bw(base_size=20)
