@@ -42,7 +42,6 @@ get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
   # Count cooccurrence and rename columns
   pairs <- count_pairs(data)
   setDT(pairs)
-  pairs <- pairs[,.(feature_source=feature1,feature_target=feature2,n)]
 
 
   if (metrics) {
@@ -167,7 +166,7 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
 
 
   # Compare to data
-  data.coo <- get_cooccurrence(data,metrics = T, npmi = F) %>%
+  pairs <- get_cooccurrence(data,metrics = T, npmi = F) %>%
     tidyr::gather(metric,value,-feature_source,-feature_target) %>%
     dplyr::left_join(data.resample,by=c("feature_source", "feature_target", "metric"))
 
@@ -180,7 +179,7 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
   # Ratio of resampled values
   # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond_source & p_cond_target)
   # -> if value.mean == 0 -> too few samples, should be avoided
-  data.coo <- data.coo %>%
+  pairs <- pairs %>%
     dplyr::mutate(boot_ratio = (value + smoothing) / (value_mean + smoothing)) %>%
     dplyr::mutate(boot_pmi =   ifelse(boot_ratio != 0, log2(boot_ratio),-Inf)) %>%
     dplyr::mutate(boot_npmi =  ifelse(boot_pmi != -Inf, boot_pmi / -log2(value_mean + smoothing),-1)) %>%
@@ -190,5 +189,5 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
     dplyr::mutate(sig_lo = (value < value_lo) ) %>%
     dplyr::mutate(sig = sig_hi | sig_lo)
 
-  return (data.coo)
+  return (pairs)
 }
