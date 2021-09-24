@@ -1,0 +1,86 @@
+---
+title: "Sequences"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sequences}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tidyverse)
+library(npmi)
+
+# Load example data
+threads <- read_csv2(system.file("extdata", "threads.csv", package = "npmi"))
+
+# Add id of previous item
+threads <- threads %>% 
+  arrange(id) %>% 
+  group_by(parent_id) %>% 
+  mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>% 
+  ungroup()
+
+
+threads <- select(threads,item=id,item_prev=id_prev,feature,weight)
+threads
+
+```
+
+```{r}
+# Count sequences of features
+threads %>%
+  count_sequences() %>% 
+  pivot_wider(names_from=feature_next,values_from=n)
+```
+
+```{r}
+pairs <- threads %>% 
+  get_sequences(npmi = T) %>% 
+  as_tibble()
+
+print(pairs)
+
+# Plot conditional matrix
+pairs %>% 
+  select(source=feature_prev,target=feature_next,value=p_cond_prev) %>% 
+  matrixmap() +
+  theme_bw(base_size=20)
+
+```
+
+
+```{r}
+# Resample sequences and calculate NPMI
+# Be patient...simulates 1000 random worlds for the baseline probability
+pairs_resampled <- threads %>%
+  resample_sequences(trials=100)
+
+```
+
+
+```{r}
+pairs_resampled %>% 
+  filter(metric=="p_cond_prev") %>% 
+  select(feature_prev, feature_next, value, value_mean, boot_ratio, boot_npmi,sig) %>% 
+  print()
+
+
+#Plot npmi matrix
+pairs_resampled %>% 
+  filter(metric=="p_cond_prev") %>% 
+  filter(sig == T) %>% 
+  select(source=feature_prev,target=feature_next,value=boot_npmi) %>% 
+  #mutate(source=as.factor(source),target=as.factor(target)) %>% 
+  matrixmap() +
+  theme_bw(base_size=20)
+
+
+```
