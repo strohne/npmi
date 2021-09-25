@@ -39,7 +39,7 @@ threads %>%
 
 # Calculate p values for each combination
 pairs <- threads %>% 
-  get_cooccurrence(npmi = T) %>% 
+  get_cooccurrence() %>% 
   as_tibble()
 
 print(pairs)
@@ -47,7 +47,7 @@ print(pairs)
 
 # Plot conditional matrix
 pairs %>% 
-  select(source=feature_source,target=feature_target,value=p_cond_source) %>% 
+  select(source=feature_source,target=feature_target,value=p_cond) %>% 
   matrixmap() +
   theme_bw(base_size=20)
 
@@ -57,21 +57,27 @@ pairs %>%
 # Resample cooccurrence and calculate NPMI
 # Be patient...simulates 1000 random worlds for the baseline probability
 pairs_resampled <- threads %>%
-  resample_cooccurrence(trials=1000)
+  resample_cooccurrence(trials=100)
+
+```
+```{r}
+# Trace plot
+pairs_resampled$trace %>% 
+  mutate(pair=paste0(feature_source,feature_target)) %>% 
+  ggplot(aes(x=no,y=p_cond,color=pair)) +
+  geom_line(alpha=0.5,size=1) +
+  theme_bw()
 
 ```
 
 
 ```{r}
 pairs_resampled %>% 
-  filter(metric=="p_cond_source") %>% 
-  select(feature_source, feature_target, value, value_mean, ratio, npmi, sig) %>% 
+  select(feature_source, feature_target, p_cond, p_cond_mean, ratio, pmi,npmi, sig) %>% 
   print()
-
 
 #Plot npmi matrix
 pairs_resampled %>% 
-  filter(metric=="p_cond_source") %>% 
   filter(sig == T) %>% 
   select(source=feature_source,target=feature_target,value=npmi) %>% 
   matrixmap() +

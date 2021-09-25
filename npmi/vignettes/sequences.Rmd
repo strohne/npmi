@@ -65,6 +65,13 @@ pairs_resampled <- threads %>%
 
 ```
 
+# Trace plot
+pairs_resampled$trace %>% 
+  mutate(pair=paste0(feature_source,feature_target)) %>% 
+  ggplot(aes(x=no,y=p_cond,color=pair)) +
+  geom_line(alpha=0.5,size=1) +
+  theme_bw()
+  
 
 ```{r}
 pairs_resampled %>% 

@@ -21,12 +21,10 @@
 #'             Make sure not to include duplicates (that's where the weight kicks in, use it!).
 #'             The feature and item columns can contain numeric IDs, character strings or factors.
 #'             Provide character strings or factors to complete combinations not found in the data.
-#' @param metrics T|F Whether to calculate p, p_cond_source, p_cond_target
-#' @param npmi T|F Whether to calculate npmi (without resampling)
 #' @return A tibble
 #' @import data.table
 #' @export
-get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
+get_cooccurrence <- function(data, .progress = NULL) {
   if (!is.null(.progress)) {
     .progress$tick()$print()
   }
@@ -44,46 +42,22 @@ get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
   setDT(pairs)
 
 
-  if (metrics) {
+  # Share of feature in all items
+  items_count <- length(unique(data[,item]))
 
-    # Share of feature in all items
-    # -> propability of feature in an item
-    items_count <- length(unique(data[,item]))
+  features <- copy(data)
+  features <- features[, .(n_items = sum(weight, na.rm = T)), by = feature]
+  features[, p_items := n_items / items_count]
 
-    features <- copy(data)
-    features <- features[, .(n_items = sum(weight, na.rm = T)), by = feature]
-    features[, p_items := n_items / items_count]
+  # Share of items with cooccurring feature in all items
+  pairs[, p := n / items_count]
+  pairs <- pairs[features[, .(feature_source = feature,p_source=p_items)],on="feature_source"]
 
-    # Share of items with cooccurring feature in all items
-    pairs[, p := n / items_count]
-    pairs <- pairs[features[, .(feature_source = feature,n_source=n_items,p_source=p_items)],on="feature_source"]
-    pairs <- pairs[features[, .(feature_target = feature,n_target=n_items,p_target=p_items)],on="feature_target"]
-
-    # Conditional probability
-    pairs[, p_cond_source := p / p_source]
-    pairs[, p_cond_target := p / p_target]
-
-    # LLR
-    #codings.lag0 <- calculate_llr(codings.lag0)
-
-  }
-
-  if (npmi) {
-
-    # Relative Risk
-    pairs[, ratio := (p / (p_target * p_source))]
-
-    # PMI
-    pairs[, pmi := log2(ratio)]
-    pairs[, npmi := pmi / ( -log2(p))]
-    pairs[, npmi := ifelse(is.nan(npmi),-1,npmi)]
-
-  }
+  # Conditional probability
+  pairs[, p_cond := p / p_source]
 
   pairs
 }
-
-
 
 
 #' Shuffle features for resampling
@@ -96,13 +70,11 @@ get_cooccurrence <- function(data, metrics = T, npmi = F,.progress = NULL) {
 #'             Make sure not to include duplicates (that's where the weight kicks in, use it!).
 #'             The feature and item columns can contain numeric IDs, character strings or factors.
 #'             Provide character strings or factors to complete combinations not found in the data.
-#' @param metrics T|F Whether to calculate p, p_cond_source, p_cond_target
-#' @param npmi T|F Whether to calculate npmi (without resampling)
 #' @param .progress F|T For internal use of resample_cooccurrence. Passes the progress bar from the furrr package.
 #' @return A tibble
 #' @import data.table
 #' @export
-shuffle_cooccurrence <- function(data, metrics = T, npmi = F, .progress = NULL) {
+shuffle_cooccurrence <- function(data, .progress = NULL) {
 
   # Convert to data.table
   setDT(data)
@@ -112,7 +84,7 @@ shuffle_cooccurrence <- function(data, metrics = T, npmi = F, .progress = NULL) 
   data[, feature := sample(feature,length(feature),replace=F)]
   data <- unique(data, by = c("item", "feature"))
 
-  get_cooccurrence(data, metrics, npmi, .progress)
+  get_cooccurrence(data, .progress)
 }
 
 
@@ -136,29 +108,36 @@ shuffle_cooccurrence <- function(data, metrics = T, npmi = F, .progress = NULL) 
 resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
 
   # Get shuffled data
-  data.resample <- tibble(no = c(1:trials)) %>%
+  data_resample <- tibble(no = c(1:trials)) %>%
     mutate(co = furrr::future_map(
       no,
-      ~shuffle_cooccurrence(data, metrics=T),
+      ~shuffle_cooccurrence(data),
       .progress = T,
       .options = furrr::furrr_options(seed = TRUE))
     ) %>%
     unnest(co)
 
+  # Get trace of mean
+  trace <- data_resample %>%
+    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::arrange(no) %>%
+    dplyr::mutate(p_cond = cumsum(p_cond) / no) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(feature_source,feature_target,no,p_cond)
+
   # Calculate confidence interval
-  data.resample <- data.resample %>%
-    tidyr::gather(metric,value,-no,-feature_source,-feature_target) %>%
-    dplyr::group_by(feature_source,feature_target,metric)  %>%
-    dplyr::summarize(value_lo = quantile(value, 0.025, type=1),
-                     value_med = quantile(value, 0.5, type=1),
-                     value_mean = mean(value),
-                     value_hi = quantile(value, 0.975, type=1),
+  data_resample <- data_resample %>%
+    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::summarize(p_cond_lo = quantile(p_cond, 0.025, type=1),
+                     p_cond_med = quantile(p_cond, 0.5, type=1),
+                     p_cond_mean = mean(p_cond),
+                     p_cond_hi = quantile(p_cond, 0.975, type=1),
                      .groups = 'keep') %>%
     dplyr::ungroup()
 
   # Check if all cases were resampled
-  m_0 <- dplyr::filter(data.resample,value_mean == 0) %>% dplyr::count()
-  m_1 <- dplyr::filter(data.resample,value_mean == 1) %>% dplyr::count()
+  m_0 <- dplyr::filter(data_resample,p_cond_mean == 0) %>% dplyr::count()
+  m_1 <- dplyr::filter(data_resample,p_cond_mean == 1) %>% dplyr::count()
 
   if (m_0 > 0)
     warning(paste0(m_0," pairs never occured in resampling, probability not reliable. Increase number of trials!"))
@@ -168,9 +147,8 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
 
 
   # Compare to data
-  pairs <- get_cooccurrence(data,metrics = T, npmi = F) %>%
-    tidyr::gather(metric,value,-feature_source,-feature_target) %>%
-    dplyr::left_join(data.resample,by=c("feature_source", "feature_target", "metric"))
+  pairs <- get_cooccurrence(data) %>%
+    dplyr::left_join(data_resample,by=c("feature_source", "feature_target"))
 
   # Smoothing / pseudocount
   # -> set smoothing to 1  to apply Laplace's rule of succession
@@ -179,17 +157,27 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
   }
 
   # Ratio of resampled values
-  # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond_source & p_cond_target)
+  # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond)
   # -> if value.mean == 0 -> too few samples, should be avoided
   pairs <- pairs %>%
-    dplyr::mutate(ratio = (value + smoothing) / (value_mean + smoothing)) %>%
-    dplyr::mutate(pmi =   ifelse(ratio != 0, log2(ratio),-Inf)) %>%
-    dplyr::mutate(npmi =  ifelse(pmi != -Inf, pmi / -log2(value_mean + smoothing),-1)) %>%
+    dplyr::mutate(ratio = (p_cond + smoothing) / (p_cond_mean + smoothing)) %>%
+    dplyr::mutate(pmi =   case_when(
+      p_cond == 0 ~ -Inf,
+      p_cond_mean == 0 ~ Inf,
+      TRUE ~ log2(ratio)
+    )) %>%
+    dplyr::mutate(npmi =  case_when(
+      pmi == -Inf ~ -1,
+      pmi == Inf ~ 1,
+      pmi == 0 ~ 0,
+      pmi > 0 ~ pmi / -log2(p_cond_mean + smoothing), # -log(x) == log(1/x)
+      pmi < 0 ~ pmi / -log2(p_cond + smoothing)
+    )) %>%
 
     # Significance compared to CI
-    dplyr::mutate(sig_hi = (value > value_hi) ) %>%
-    dplyr::mutate(sig_lo = (value < value_lo) ) %>%
+    dplyr::mutate(sig_hi = (p_cond > p_cond_hi) ) %>%
+    dplyr::mutate(sig_lo = (p_cond < p_cond_lo) ) %>%
     dplyr::mutate(sig = sig_hi | sig_lo)
 
-  return (pairs)
+  return (list("pairs"=pairs,"trace"=trace))
 }
