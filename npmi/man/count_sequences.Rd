@@ -7,7 +7,7 @@
 count_sequences(data)
 }
 \arguments{
-\item{data}{Data table containin the columns item, item_prev, feature.
+\item{data}{A data.frame containing the columns item, item_prev, feature.
 - item contain the ID of a document (e.g. a comment)
 - item_prev contains the ID of the preceding document (e.g. the parent comment)
 - feature contains a category  (e.g. the topic of the comment)
@@ -15,7 +15,7 @@ Items with multiple features should occur multiple times in the data table.
 TODO: add weight option (instead of distinct item-feature-combinations)}
 }
 \value{
-A data table
+A tibble
 }
 \description{
 Count sequences of features from sequences of items
