@@ -19,38 +19,32 @@ library(tidyverse)
 library(npmi)
 
 # Load example data
-threads <- read_csv2(system.file("extdata", "threads.csv", package = "npmi"))
+threads <- read_csv2(system.file("extdata", "threads.csv", package = "npmi")) %>% 
+  rename(item=id,item_parent=parent_id) %>% 
+  add_previous_item()
 
-# Add id of previous item
-threads <- threads %>% 
-  arrange(id) %>% 
-  group_by(parent_id) %>% 
-  mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>% 
-  ungroup()
-
-
-threads <- select(threads,item=id,item_prev=id_prev,feature,weight)
 threads
 
 ```
+
 
 ```{r}
 # Count sequences of features
 threads %>%
   count_sequences() %>% 
-  pivot_wider(names_from=feature_next,values_from=n)
+  pivot_wider(names_from=feature_target,values_from=n)
 ```
 
 ```{r}
 pairs <- threads %>% 
-  get_sequences(npmi = T) %>% 
+  get_sequences() %>% 
   as_tibble()
 
 print(pairs)
 
 # Plot conditional matrix
 pairs %>% 
-  select(source=feature_prev,target=feature_next,value=p_cond_prev) %>% 
+  select(source=feature_source,target=feature_target,value=p) %>% 
   matrixmap() +
   theme_bw(base_size=20)
 
@@ -65,27 +59,26 @@ pairs_resampled <- threads %>%
 
 ```
 
+```{r}
 # Trace plot
 pairs_resampled$trace %>% 
-  mutate(pair=paste0(feature_source,feature_target)) %>% 
-  ggplot(aes(x=no,y=p_cond,color=pair)) +
+  mutate(pair=paste0(feature_source,"-",feature_target)) %>% 
+  ggplot(aes(x=no,y=p,color=pair)) +
   geom_line(alpha=0.5,size=1) +
   theme_bw()
-  
+
+```
 
 ```{r}
-pairs_resampled %>% 
-  filter(metric=="p_cond_source") %>% 
-  select(feature_source, feature_target, value, value_mean, ratio, npmi,sig) %>% 
+pairs_resampled$pairs %>% 
+  select(feature_source, feature_target, p, p_mean, ratio, npmi,sig) %>% 
   print()
 
 
 #Plot npmi matrix
-pairs_resampled %>% 
-  filter(metric=="p_cond_source") %>% 
+pairs_resampled$pairs %>% 
+  select(source=feature_source,target=feature_target,value=npmi,sig) %>% 
   filter(sig == T) %>% 
-  select(source=feature_source,target=feature_target,value=npmi) %>% 
-  #mutate(source=as.factor(source),target=as.factor(target)) %>% 
   matrixmap() +
   theme_bw(base_size=20)
 
