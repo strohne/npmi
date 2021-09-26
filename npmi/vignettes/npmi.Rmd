@@ -1,0 +1,77 @@
+---
+title: "npmi"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{npmi}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+```{r setup}
+library(tidyverse)
+library(npmi)
+theme_set(theme_bw())
+
+# "Pointwise  mutual  information  (PMI,  5)  is  a  measure  of
+# how  much  the  actual probability of a particular co-occurrence
+# of events p(x, y) differs from what we would expect it to be on the
+# basis of the probabilities of the individual eventsand the assumption
+# of independence p(x)p(y)." (Bouma 2009)
+# Problem: PMI und relative risk werden höher für seltenere Kombinationen,
+# weil sich das Maximum bewegt (Bouma 2009)
+# Besser: NPMI mit festen Grenzen -1 bis +1
+
+# https://pdfs.semanticscholar.org/1521/8d9c029cbb903ae7c729b2c644c24994c201.pdf
+# https://stats.stackexchange.com/questions/140935/how-does-the-logpx-y-normalize-the-point-wise-mutual-information
+
+data <- tibble(
+  p_actual = seq(0,1,by=0.1),
+  p_expected = seq(0,1,by=0.1)
+) %>% 
+  complete(p_actual,p_expected)
+
+data <- data %>% 
+  npmi(p_actual,p_expected)
+
+```
+
+```{r}
+
+data %>% 
+  filter(p_expected > 0, p_expected < 1) %>% 
+  ggplot(aes(x=p_actual,y=npmi)) +
+  geom_line() +
+  geom_hline(yintercept=0,color="red") +
+  geom_vline(aes(xintercept=p_expected),color="red") +
+  facet_wrap(~p_expected)
+
+```
+
+
+```{r}
+
+# NPMI compensates for moving minima and maxima:
+# - Gven a high baseline probability of say 0.8, a doubled probability as indicated 
+#   by a pmi of +1 can't happen. 
+# - Given a low baseline probability of say 0.2, a halfed probability as indicated 
+#   by a pmi of -1 can't happen. 
+# NPMI standardizes with regard to the maximum possible minumum and maximum ratio.
+
+data %>% 
+  filter(p_expected > 0, p_expected < 1) %>% 
+  ggplot(aes(x=pmi,y=npmi)) +
+  geom_point() +
+  geom_hline(yintercept=0,color="red") +
+  geom_vline(xintercept=0,color="red") +
+  facet_wrap(~p_expected)
+```
+
