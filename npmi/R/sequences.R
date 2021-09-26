@@ -96,15 +96,15 @@ resample_sequences <- function(data, trials=10000, smoothing=0, sig.level=0.05) 
 
   # Get trace of mean
   trace <- data_resample %>%
-    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::group_by(source,target)  %>%
     dplyr::arrange(no) %>%
     dplyr::mutate(p = cumsum(p) / no) %>%
     dplyr::ungroup() %>%
-    dplyr::select(feature_source,feature_target,no,p)
+    dplyr::select(source,target,no,p)
 
   # Calculate confidence interval
   data_resample <- data_resample %>%
-    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::group_by(source,target)  %>%
     dplyr::summarize(p_lo = quantile(p, sig.level / 2, type=1),
                      p_med = quantile(p, 0.5, type=1),
                      p_mean = mean(p),
@@ -125,7 +125,7 @@ resample_sequences <- function(data, trials=10000, smoothing=0, sig.level=0.05) 
 
   # Compare to data
   pairs <- get_sequences(data) %>%
-    dplyr::left_join(data_resample,by=c("feature_source", "feature_target"))
+    dplyr::left_join(data_resample,by=c("source", "target"))
 
   # Calculate npmi
   if (smoothing > 0) {

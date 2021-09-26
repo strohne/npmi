@@ -39,7 +39,7 @@ get_cooccurrence <- function(data, .progress = NULL) {
 
   # Share of items with cooccurring feature in all items
   pairs[, p := n / items_count]
-  pairs <- pairs[features[, .(feature_source = feature,p_source=p_items)],on="feature_source"]
+  pairs <- pairs[features[, .(source = feature,p_source=p_items)],on="source"]
 
   # Conditional probability
   pairs[, p_cond := p / p_source]
@@ -104,20 +104,20 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0, sig.level = 0
       .options = furrr::furrr_options(seed = TRUE))
     ) %>%
     unnest(co) %>%
-    filter(feature_source != feature_target)
+    filter(source != target)
 
 
   # Get trace of mean
   trace <- data_resample %>%
-    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::group_by(source,target)  %>%
     dplyr::arrange(no) %>%
     dplyr::mutate(p_cond = cumsum(p_cond) / no) %>%
     dplyr::ungroup() %>%
-    dplyr::select(feature_source,feature_target,no,p_cond)
+    dplyr::select(source,target,no,p_cond)
 
   # Calculate confidence interval
   data_resample <- data_resample %>%
-    dplyr::group_by(feature_source,feature_target)  %>%
+    dplyr::group_by(source,target)  %>%
     dplyr::summarize(p_cond_lo = quantile(p_cond,  sig.level / 2, type=1),
                      p_cond_med = quantile(p_cond, 0.5, type=1),
                      p_cond_mean = mean(p_cond),
@@ -138,7 +138,7 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0, sig.level = 0
 
   # Compare to data
   pairs <- get_cooccurrence(data) %>%
-    dplyr::left_join(data_resample,by=c("feature_source", "feature_target"))
+    dplyr::left_join(data_resample,by=c("source", "target"))
 
   # Calculate npmi
   if (smoothing > 0) {

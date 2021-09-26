@@ -70,24 +70,24 @@ count_pairs <- function(data) {
 #   }
 
   # Rename columns
-  colnames(pairs) <- c("feature_source","feature_target","n")
+  colnames(pairs) <- c("source","target","n")
 
   # Add labels
   if (!is.null(features)) {
-    pairs$feature_source <- factor(pairs$feature_source,levels=c(1:length(features)),labels=features)
-    pairs$feature_target <- factor(pairs$feature_target,levels=c(1:length(features)),labels=features)
+    pairs$source <- factor(pairs$source,levels=c(1:length(features)),labels=features)
+    pairs$target <- factor(pairs$target,levels=c(1:length(features)),labels=features)
   }
 
   # Complete
   pairs <- pairs %>%
     tibble::as_tibble() %>%
-    tidyr::complete(feature_source,feature_target,fill=list(n=0))
+    tidyr::complete(source,target,fill=list(n=0))
 
 
   # Convert labels to character
   if (!is.null(features)) {
-     pairs$feature_source <- as.character(pairs$feature_source)
-     pairs$feature_target <- as.character(pairs$feature_target)
+     pairs$source <- as.character(pairs$source)
+     pairs$target <- as.character(pairs$target)
   }
 
 
@@ -130,32 +130,32 @@ count_sequences <- function(data) {
   data <- unique(data[,.(item,item_prev,feature)])
 
   # Inner self join
-  data <- data[data[,.(feature_source = feature, item_prev = item)],
+  data <- data[data[,.(source = feature, item_prev = item)],
                on = "item_prev", nomatch = 0]
 
   # Count
-  data <- data[, .(n=.N), by=c("feature", "feature_source")]
+  data <- data[, .(n=.N), by=c("feature", "source")]
 
   # Rename columns
-  data <- data[,.(feature_source,feature_target=feature,n)]
+  data <- data[,.(source,target=feature,n)]
 
   # Complete
   data <- data %>%
     tibble::as_tibble() %>%
-    tidyr::complete(feature_source,feature_target,fill=list(n=0))
+    tidyr::complete(source,target,fill=list(n=0))
 
   # Alternative using data.table (but empty factors are ommitted)
-  # data <- data[CJ(feature = feature_source,
-  #                 feature_source = feature_source,
+  # data <- data[CJ(feature = source,
+  #                 source = source,
   #                 unique=TRUE
   #                 ),
-  #                 on=.(feature, feature_source)]
+  #                 on=.(feature, source)]
   # setnafill(data, fill = 0, cols = 'n')
 
   # # Convert labels to character
   # if (!is.null(features)) {
-  #   data$feature_source <- as.character(data$feature_source)
-  #   data$feature_target <- as.character(data$feature_target)
+  #   data$source <- as.character(data$source)
+  #   data$target <- as.character(data$target)
   # }
 
   return(data)
