@@ -1,7 +1,10 @@
 #' Creates a heatmap
 #'
-#' @param data A tibble with columns source, target, target_label,
-#'            source_group, target_group, value
+#' @param data A tibble with columns
+#'            source, target,
+#'            source_label, target_label,
+#'            source_group, target_group,
+#'            value
 #' @param caption The legend caption
 #' @import ggplot2
 #' @export
@@ -29,6 +32,11 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
   #
 
 
+  if (!("source_label" %in% colnames(data))) {
+    data$source_label <- data$source
+  }
+
+
   if (!("target_label" %in% colnames(data))) {
     data$target_label <- data$target
   }
@@ -46,34 +54,34 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
   # Gruppen und Labels
   #
 
-  label.y.data <- data %>%
+  y.label.data <- data %>%
     distinct(source,source_group) %>%
     arrange(source_group,source) %>%
     mutate(no = row_number()) %>%
     mutate(newgroup =  (lag(source_group) != source_group)   | (no==1))
 
-  label.y <- label.y.data$source
-  groups.y <- filter(label.y.data,newgroup)$no - 0.5
+  # label.y <- y.label.data$source
+  y.groups <- filter(y.label.data,newgroup)$no - 0.5
 
-  groups.breaks.y <- groups.y + 0.5
-  groups.label.y <- filter(label.y.data,newgroup)$source_group
+  y.groups.breaks <- y.groups + 0.5
+  y.groups.label <- filter(y.label.data,newgroup)$source_group
 
-  features.x.data <- data %>%
+  x.features.data <- data %>%
     distinct(target,target_group,target_label) %>%
     arrange(target_group,target) %>%
     mutate(no = row_number()) %>%
     mutate(newgroup = (lag(target_group) != target_group)  | (no==1))
 
-  label.x <- features.x.data$target
-  features.x.label <- features.x.data$target_label
-  groups.x <- filter(features.x.data,newgroup)$no - 0.5
+  x.label <- x.features.data$target
+  x.features.label <- x.features.data$target_label
+  x.groups <- filter(x.features.data,newgroup)$no - 0.5
 
-  groups.breaks.x <- groups.x+0.5
-  groups.label.x <- filter(features.x.data,newgroup)$target_group
+  x.groups.breaks <- x.groups+0.5
+  x.groups.label <- filter(x.features.data,newgroup)$target_group
 
   data <- data %>%
     mutate(source=factor(source,levels=label.y)) %>%
-    mutate(target=factor(target,levels=label.x))
+    mutate(target=factor(target,levels=x.label))
 
 
   #
@@ -109,14 +117,14 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
       name=caption) +
 
     scale_x_reverse(
-      breaks=c(1:length(label.x)),
-      labels=features.x.label,
+      breaks=c(1:length(x.label)),
+      labels=x.features.label,
       position="top",
       name="" ,
       sec.axis=sec_axis(
         trans= ~.,
-        breaks=groups.breaks.x,
-        labels=groups.label.x,
+        breaks=x.groups.breaks,
+        labels=x.groups.label,
         name="Target"
       )
     ) +
@@ -128,8 +136,8 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
       name="",
       sec.axis=sec_axis(
         trans= ~.,
-        breaks=groups.breaks.y,
-        labels=groups.label.y,
+        breaks=y.groups.breaks,
+        labels=y.groups.label,
         name="Source"
       )
     ) +
@@ -159,12 +167,12 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
     )
 
   # Add lines between groups
-  for (y in groups.y) {
+  for (y in y.groups) {
     pl <- pl +
       geom_hline(yintercept = y,size=0.5)
   }
 
-  for (x in groups.x) {
+  for (x in x.groups) {
     pl <- pl +
       geom_vline(xintercept = x,size=0.5)
   }
