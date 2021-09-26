@@ -8,8 +8,7 @@
 #' @param caption The legend caption
 #' @import ggplot2
 #' @export
-matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.mid=NULL) {
-  #grob <- grobTree(textGrob("Source", x=0.9,  y=1, hjust=0,gp=gpar(fontsize=8)))
+matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.mid=NULL,base_size = 10) {
 
   #
   # Scale min-max
@@ -22,10 +21,14 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
     value.mid <- (value.max-value.min) / 2
 
   # Für 0,0.25,0.5,0.75 und 1.0
-  if (value.min < 0)
+  if (value.min < 0) {
     value.colors <- c("#cc1237","#cc1237","#fbfbd9","#28cc12","#28cc12")
-  else
+    value.gradient <-  c(0,0.1,0.5,0.9,1)
+  }
+  else {
     value.colors <- c("#fbfbd9","#e38a0c","#e38a0c","#e38a0c","#ae344c")
+    value.gradient <- c(0,0.25,0.5,0.75,1)
+  }
 
   #
   # Defaults
@@ -45,43 +48,45 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
     data$source_group = ""
   }
 
-
   if (!("target_group" %in% colnames(data))) {
     data$target_group = ""
+  }
+
+  if (!("source_no" %in% colnames(data))) {
+    data$source_no = NA
+  }
+
+  if (!("target_no" %in% colnames(data))) {
+    data$target_no = NA
   }
 
   #
   # Gruppen und Labels
   #
 
-  y.label.data <- data %>%
-    distinct(source,source_group) %>%
-    arrange(source_group,source) %>%
+  y.features <- data %>%
+    distinct(source_no,source_group,source,source_label) %>%
+    arrange(source_no,source_group,source) %>%
     mutate(no = row_number()) %>%
-    mutate(newgroup =  (lag(source_group) != source_group)   | (no==1))
+    mutate(newgroup =  (lag(source_group) != source_group) | (no==1))
 
-  # label.y <- y.label.data$source
-  y.groups <- filter(y.label.data,newgroup)$no - 0.5
-
+  y.groups <- filter(y.features,newgroup)$no - 0.5
   y.groups.breaks <- y.groups + 0.5
-  y.groups.label <- filter(y.label.data,newgroup)$source_group
+  y.groups.label <- filter(y.features,newgroup)$source_group
 
-  x.features.data <- data %>%
-    distinct(target,target_group,target_label) %>%
-    arrange(target_group,target) %>%
+  x.features <- data %>%
+    distinct(target_no,target_group,target,target_label) %>%
+    arrange(target_no,target_group,target) %>%
     mutate(no = row_number()) %>%
     mutate(newgroup = (lag(target_group) != target_group)  | (no==1))
 
-  x.label <- x.features.data$target
-  x.features.label <- x.features.data$target_label
-  x.groups <- filter(x.features.data,newgroup)$no - 0.5
-
+  x.groups <- filter(x.features,newgroup)$no - 0.5
   x.groups.breaks <- x.groups+0.5
-  x.groups.label <- filter(x.features.data,newgroup)$target_group
+  x.groups.label <- filter(x.features,newgroup)$target_group
 
   data <- data %>%
-    mutate(source=factor(source,levels=label.y)) %>%
-    mutate(target=factor(target,levels=x.label))
+    mutate(source=factor(source,levels=y.features$source)) %>%
+    mutate(target=factor(target,levels=x.features$target))
 
 
   #
@@ -105,20 +110,16 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
     geom_tile(color="lightgray")+
     geom_text(aes(label=value_label))+ #,size=1.8
 
-    #annotation_custom(grob) +
-
-
     scale_fill_gradientn(
       colours = value.colors,
-      #values = c(0,0.25,0.5,0.75,1),
-      values = c(0,0.1,0.5,0.9,1),
+      values = value.gradient,
       na.value = "white",
       limits=c(value.min,value.max),
       name=caption) +
 
     scale_x_reverse(
-      breaks=c(1:length(x.label)),
-      labels=x.features.label,
+      breaks=c(1:length(x.features$target_label)),
+      labels=x.features$target_label,
       position="top",
       name="" ,
       sec.axis=sec_axis(
@@ -129,10 +130,9 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
       )
     ) +
     scale_y_reverse(
-      #limits = c(1,27),
       position="right",
-      breaks=c(1:length(label.y)),
-      labels=label.y,
+      breaks=c(1:length(y.features$source_label)),
+      labels=y.features$source_label,
       name="",
       sec.axis=sec_axis(
         trans= ~.,
@@ -145,7 +145,7 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
 
     coord_fixed(expand=F) +
 
-    theme_bw(base_size = 8)+
+    theme_bw(base_size = base_size)+
     theme(
       #plot.margin = unit(c(.5,6,.5,.5),"lines"),
       strip.background =element_rect(fill="white"),
