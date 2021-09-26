@@ -21,7 +21,8 @@
 #' @param data A data frame containing the columns item, feature and optionally weight.
 #'             - item contains the ID of a document (e.g. a comment)
 #'             - feature contains a category  (e.g. the topic of the comment)
-#'             - weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?). Will be initialized with 1 if missing.
+#'             - weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?).
+#'             - weight will be initialized with 1 if missing.
 #'             Items with multiple features should occur multiple times in the data table.
 #'             Make sure not to include duplicates (that's where the weight kicks in, use it!).
 #'             The feature and item columns can contain numeric IDs, character strings or factors.
@@ -102,6 +103,8 @@ count_pairs <- function(data) {
 #'             - item contain the ID of a document (e.g. a comment)
 #'             - item_prev contains the ID of the preceding document (e.g. the parent comment)
 #'             - feature contains a category  (e.g. the topic of the comment)
+#'             - weight contains the prevalence of the category in the range 0 to 1.
+#'               weight Will be initialized with 1 if missing.
 #'             Items with multiple features should occur multiple times in the data table.
 #'             TODO: add weight option (instead of distinct item-feature-combinations)
 #' @return A tibble
@@ -109,10 +112,10 @@ count_pairs <- function(data) {
 #' @import data.table
 count_sequences <- function(data) {
 
-  # # Add weight
-  # if (!("weight" %in% colnames(data))) {
-  #   data$weight <- 1
-  # }
+  # Add weight
+  if (!("weight" %in% colnames(data))) {
+    data$weight <- 1
+  }
 
   # Convert to data.table
   data.table::setDT(data)
@@ -127,14 +130,14 @@ count_sequences <- function(data) {
   # }
 
   # Distinct item-feature-combinations
-  data <- unique(data[,.(item,item_prev,feature)])
+  data <- unique(data[weight > 0,.(item,item_prev,feature,weight)])
 
   # Inner self join
-  data <- data[data[,.(source = feature, item_prev = item)],
-               on = "item_prev", nomatch = 0]
+  data <- data[data[!is.na(item_prev),.(source = feature, item_prev = item,weight_prev=weight)],
+               on = "item_prev", nomatch = 0, allow.cartesian=TRUE]
 
   # Count
-  data <- data[, .(n=.N), by=c("feature", "source")]
+  data <- data[, .(n=sum(weight*weight_prev)), by=c("feature", "source")]
 
   # Rename columns
   data <- data[,.(source,target=feature,n)]
