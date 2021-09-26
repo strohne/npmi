@@ -95,7 +95,7 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
 
     ggplot(aes(y=source,x=target,fill=value,group=source)) +
     geom_tile(color="lightgray")+
-    geom_text(aes(label=value_label),size=1.8)+
+    geom_text(aes(label=value_label))+ #,size=1.8
 
     #annotation_custom(grob) +
 
