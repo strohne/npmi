@@ -82,7 +82,7 @@ shuffle_sequences <- function(data, .progress = NULL) {
 #'         Use boot.npmi for the p_cond_source metric to find extraordinary cooccurrence
 #' @import data.table
 #' @export
-resample_sequences <- function(data, trials=10000, smoothing=0) {
+resample_sequences <- function(data, trials=10000, smoothing=0, sig.level=0.05) {
 
   # Get shuffled data
   data_resample <- tibble(no = c(1:trials)) %>%
@@ -105,10 +105,10 @@ resample_sequences <- function(data, trials=10000, smoothing=0) {
   # Calculate confidence interval
   data_resample <- data_resample %>%
     dplyr::group_by(feature_source,feature_target)  %>%
-    dplyr::summarize(p_lo = quantile(p, 0.025, type=1),
+    dplyr::summarize(p_lo = quantile(p, sig.level / 2, type=1),
                      p_med = quantile(p, 0.5, type=1),
                      p_mean = mean(p),
-                     p_hi = quantile(p, 0.975, type=1),
+                     p_hi = quantile(p, 1 - (sig.level / 2), type=1),
                      .groups = 'keep') %>%
     dplyr::ungroup()
 
@@ -127,35 +127,36 @@ resample_sequences <- function(data, trials=10000, smoothing=0) {
   pairs <- get_sequences(data) %>%
     dplyr::left_join(data_resample,by=c("feature_source", "feature_target"))
 
-  # Smoothing / pseudocount
-  # -> set smoothing to 1  to apply Laplace's rule of succession
+  # Calculate npmi
   if (smoothing > 0) {
     smoothing <- smoothing / (smoothing * trials)
   }
 
-  # Ratio of resampled values
-  # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond_source & p_cond_target)
-  # -> if value.mean == 0 -> too few samples, should be avoided
-  pairs <- pairs %>%
-    dplyr::mutate(ratio = (p + smoothing) / (p_mean + smoothing)) %>%
+  pairs <- pairs  %>%
+    npmi(p, p_mean, smoothing) %>%
+    conf(p, p_lo, p_hi)
 
-    dplyr::mutate(pmi =   case_when(
-      p == 0 ~ -Inf,
-      p_mean == 0 ~ Inf,
-      TRUE ~ log2(ratio)
-    )) %>%
-    dplyr::mutate(npmi =  case_when(
-      pmi == -Inf ~ -1,
-      pmi == Inf ~ 1,
-      pmi == 0 ~ 0,
-      pmi > 0 ~ pmi / -log2(p_mean + smoothing), # -log(x) == log(1/x)
-      pmi < 0 ~ pmi / -log2(p + smoothing)
-    )) %>%
-
-    # Significance compared to CI
-    dplyr::mutate(sig_hi = (p > p_hi) ) %>%
-    dplyr::mutate(sig_lo = (p < p_lo) ) %>%
-    dplyr::mutate(sig = sig_hi | sig_lo)
 
   return (list("pairs"=pairs,"trace"=trace))
+}
+
+#' Add id of previous item
+#' @export
+add_previous_item <- function(data, col_item=item, col_parent=item_parent, col_order=item) {
+  col_item <- enquo(col_item)
+  col_parent <- enquo(col_parent)
+  col_order <- enquo(col_order)
+
+  items <- data %>%
+    distinct(!!col_item,.keep_all=T) %>%
+    group_by(!!col_parent) %>%
+    arrange(!!col_order) %>%
+    mutate(item_prev = ifelse(row_number() == 1,!!col_parent, lag(!!col_item))) %>%
+    ungroup() %>%
+    select(.id = !!col_item,item_prev)
+
+  data %>%
+    mutate(.id = !!col_item) %>%
+    left_join(items,by=".id") %>%
+    select(-.id)
 }

@@ -1,17 +1,5 @@
-# "Pointwise  mutual  information  (PMI,  5)  is  a  measure  of
-# how  much  the  actual probability of a particular co-occurrence
-# of events p(x, y) differs from what we would expect it to be on the
-# basis of the probabilities of the individual eventsand the assumption
-# of independence p(x)p(y)." (Bouma 2009)
-# Problem: PMI und relative risk werden höher für seltenere Kombinationen,
-# weil sich das Maximum bewegt (Bouma 2009)
-# Besser: NPMI mit festen Grenzen -1 bis +1
-
-# https://pdfs.semanticscholar.org/1521/8d9c029cbb903ae7c729b2c644c24994c201.pdf
-# https://stats.stackexchange.com/questions/140935/how-does-the-logpx-y-normalize-the-point-wise-mutual-information
-
-
-#' Count cooccurrence and calculate probabilities and npmi
+#' Count cooccurrence and calculate probabilities and npmi.
+#' Cooccurrence is calculated on the basis of conditional probabilities.
 #'
 #' @param data A data frame containing the columns item, feature and optionally weight.
 #'             - item contains the ID of a document (e.g. a comment)
@@ -105,7 +93,7 @@ shuffle_cooccurrence <- function(data, .progress = NULL) {
 #'         Use boot.npmi for the p_cond_source metric to find extraordinary cooccurrence
 #' @import data.table
 #' @export
-resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
+resample_cooccurrence <- function(data, trials=10000, smoothing=0, sig.level = 0.05) {
 
   # Get shuffled data
   data_resample <- tibble(no = c(1:trials)) %>%
@@ -115,7 +103,9 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
       .progress = T,
       .options = furrr::furrr_options(seed = TRUE))
     ) %>%
-    unnest(co)
+    unnest(co) %>%
+    filter(feature_source != feature_target)
+
 
   # Get trace of mean
   trace <- data_resample %>%
@@ -128,10 +118,10 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
   # Calculate confidence interval
   data_resample <- data_resample %>%
     dplyr::group_by(feature_source,feature_target)  %>%
-    dplyr::summarize(p_cond_lo = quantile(p_cond, 0.025, type=1),
+    dplyr::summarize(p_cond_lo = quantile(p_cond,  sig.level / 2, type=1),
                      p_cond_med = quantile(p_cond, 0.5, type=1),
                      p_cond_mean = mean(p_cond),
-                     p_cond_hi = quantile(p_cond, 0.975, type=1),
+                     p_cond_hi = quantile(p_cond, 1 - (sig.level /2), type=1),
                      .groups = 'keep') %>%
     dplyr::ungroup()
 
@@ -150,34 +140,14 @@ resample_cooccurrence <- function(data, trials=10000, smoothing=0) {
   pairs <- get_cooccurrence(data) %>%
     dplyr::left_join(data_resample,by=c("feature_source", "feature_target"))
 
-  # Smoothing / pseudocount
-  # -> set smoothing to 1  to apply Laplace's rule of succession
+  # Calculate npmi
   if (smoothing > 0) {
     smoothing <- smoothing / (smoothing * trials)
   }
 
-  # Ratio of resampled values
-  # -> boot.pmi and boot.npmi only meaningful for p values (including p_cond)
-  # -> if value.mean == 0 -> too few samples, should be avoided
-  pairs <- pairs %>%
-    dplyr::mutate(ratio = (p_cond + smoothing) / (p_cond_mean + smoothing)) %>%
-    dplyr::mutate(pmi =   case_when(
-      p_cond == 0 ~ -Inf,
-      p_cond_mean == 0 ~ Inf,
-      TRUE ~ log2(ratio)
-    )) %>%
-    dplyr::mutate(npmi =  case_when(
-      pmi == -Inf ~ -1,
-      pmi == Inf ~ 1,
-      pmi == 0 ~ 0,
-      pmi > 0 ~ pmi / -log2(p_cond_mean + smoothing), # -log(x) == log(1/x)
-      pmi < 0 ~ pmi / -log2(p_cond + smoothing)
-    )) %>%
-
-    # Significance compared to CI
-    dplyr::mutate(sig_hi = (p_cond > p_cond_hi) ) %>%
-    dplyr::mutate(sig_lo = (p_cond < p_cond_lo) ) %>%
-    dplyr::mutate(sig = sig_hi | sig_lo)
+  pairs <- pairs  %>%
+    npmi(p_cond, p_cond_mean, smoothing) %>%
+    conf(p_cond, p_cond_lo, p_cond_hi)
 
   return (list("pairs"=pairs,"trace"=trace))
 }
