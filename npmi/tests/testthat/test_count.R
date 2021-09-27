@@ -19,6 +19,7 @@ test_that("count_pairs equals pairwise_count", {
   data_actual <- data %>%
     select(item=id,feature,weight) %>%
     count_pairs() %>%
+    dplyr::rename(feature_source=source,feature_target=target) %>%
     arrange(feature_source,feature_target)
 
   testthat::expect_identical(data_actual,data_expected)
@@ -42,7 +43,7 @@ test_that("count_pairs equals content of csv-file", {
     select(item=id,feature,weight) %>%
     count_pairs() %>%
     data.frame() %>%
-    rename(feature1=feature_source,feature2=feature_target)
+    rename(feature1=source,feature2=target)
 
   testthat::expect_identical(data_actual,data_expected)
 })
@@ -62,8 +63,8 @@ test_that("count_sequences equals the tidyverse equivalent", {
     na.omit()
 
   items <- items %>%
-    arrange(id) %>%
     group_by(parent_id) %>%
+    arrange(id) %>%
     mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>%
     ungroup()
 
@@ -74,7 +75,8 @@ test_that("count_sequences equals the tidyverse equivalent", {
 
   # Distinct
   threads <- threads %>%
-    distinct(item=id,feature,item_prev = id_prev)
+    distinct(item=id,feature,item_prev = id_prev) %>%
+    na.omit()
 
 
   # Expected feature sequences
@@ -95,6 +97,7 @@ test_that("count_sequences equals the tidyverse equivalent", {
   # Actual feature sequences
   features_actual <- threads %>%
     count_sequences() %>%
+    dplyr::rename(feature_source=source,feature_target=target) %>%
     arrange(feature_source,feature_target) %>%
     data.frame()
 
@@ -116,8 +119,8 @@ test_that("count_sequences equals a csv file", {
     na.omit()
 
   items <- items %>%
-    arrange(id) %>%
     group_by(parent_id) %>%
+    arrange(id) %>%
     mutate(id_prev = ifelse(row_number() == 1,parent_id, lag(id))) %>%
     ungroup()
 
@@ -135,12 +138,12 @@ test_that("count_sequences equals a csv file", {
   data_expected <- read_csv2(system.file("extdata", "sequences.csv", package = "npmi"))
 
   # Remove spec from loaded file
-  data_expected <- data.frame(data_expected) %>%
-    rename(feature_source=feature_prev, feature_target=feature_next)
+  data_expected <- data.frame(data_expected)
 
   # Actual feature sequences
   data_actual <- threads %>%
     count_sequences() %>%
+    dplyr::rename(feature_source=source,feature_target=target) %>%
     arrange(feature_source,feature_target) %>%
     data.frame()
 

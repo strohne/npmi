@@ -7,6 +7,8 @@
 npmi(data, p_actual, p_expected, smoothing = 0)
 }
 \arguments{
+\item{data}{Data}
+
 \item{p_actual}{Name of column ame containing observed p}
 
 \item{p_expected}{Name of column containing expected p}

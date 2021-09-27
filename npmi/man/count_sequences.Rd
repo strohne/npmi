@@ -11,6 +11,8 @@ count_sequences(data)
 - item contain the ID of a document (e.g. a comment)
 - item_prev contains the ID of the preceding document (e.g. the parent comment)
 - feature contains a category  (e.g. the topic of the comment)
+- weight contains the prevalence of the category in the range 0 to 1.
+  weight Will be initialized with 1 if missing.
 Items with multiple features should occur multiple times in the data table.
 TODO: add weight option (instead of distinct item-feature-combinations)}
 }

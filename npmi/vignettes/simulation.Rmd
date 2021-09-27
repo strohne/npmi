@@ -21,17 +21,17 @@ library(npmi)
 # Create data
 features <- c("WEATHER", "POLITICS", "COUNTER","RACISM")
 
-threads <- tibble(feature_source=features,feature_target=features) %>% 
-  complete(feature_source,feature_target) %>% 
+threads <- tibble(source=features,target=features) %>% 
+  complete(source,target) %>% 
   mutate(n = case_when(
-    (feature_source == "COUNTER") & (feature_target == "RACISM") ~ list(1:1),
-    (feature_source == "RACISM") & (feature_target == "COUNTER") ~ list(1:1),
+    (source == "COUNTER") & (target == "RACISM") ~ list(1:1),
+    (source == "RACISM") & (target == "COUNTER") ~ list(1:1),
     TRUE ~ list(1:10)
   )) %>% 
   unnest(n) %>% 
-  filter(feature_source != feature_target)  %>% 
+  filter(source != target)  %>% 
   mutate(item = row_number()) %>% 
-  pivot_longer(c(feature_source,feature_target),names_to="name",values_to="feature") %>% 
+  pivot_longer(c(source,target),names_to="name",values_to="feature") %>% 
   select(-name)
 
   
@@ -46,23 +46,22 @@ pairs <- threads %>%
 
 # Plot matrix
 pairs %>% 
-  select(source=feature_source,target=feature_target,value=n) %>% 
-  matrixmap() +
-  theme_bw(base_size=10)
+  rename(value=n) %>% 
+  matrixmap()
 
 ```
 
 ```{r}
 # Resample cooccurrence and calculate NPMI
-# Be patient...simulates 1000 random worlds for the baseline probability
 pairs_resampled <- threads %>%
   resample_cooccurrence(trials=100)
 
 pairs_resampled$pairs %>% 
   filter(sig == T) %>% 
-  select(source=feature_source,target=feature_target,value=npmi,value.max=1,value.min=-1) %>% 
-  matrixmap() +
-  theme_bw(base_size=10)
+  rename(value=npmi) %>% 
+  matrixmap(value.max=1,value.min=-1) 
+
+
 
 ```
 

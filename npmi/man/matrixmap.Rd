@@ -9,12 +9,16 @@ matrixmap(
   caption = "",
   value.min = NULL,
   value.max = NULL,
-  value.mid = NULL
+  value.mid = NULL,
+  base_size = 10
 )
 }
 \arguments{
-\item{data}{A tibble with columns source, target, target_label,
-source_group, target_group, value}
+\item{data}{A tibble with columns
+source, target,
+source_label, target_label,
+source_group, target_group,
+value}
 
 \item{caption}{The legend caption}
 }

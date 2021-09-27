@@ -1,10 +1,11 @@
 #'  Calculate ratio of probabilities and npmi
 #'
-#' @param data
+#' @param data Data
 #' @param p_actual Name of column ame containing observed p
 #' @param p_expected Name of column containing expected p
 #' @param smoothing Add pseudocount. Calculate the pseudocount based on the number of trials
 #'        to apply Laplace's rule of succession.
+#' @export
 npmi <- function(data, p_actual, p_expected, smoothing = 0) {
   p_actual <- dplyr::enquo(p_actual)
   p_expected <- dplyr::enquo(p_expected)

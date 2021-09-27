@@ -10,7 +10,8 @@ count_pairs(data)
 \item{data}{A data frame containing the columns item, feature and optionally weight.
 - item contains the ID of a document (e.g. a comment)
 - feature contains a category  (e.g. the topic of the comment)
-- weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?). Will be initialized with 1 if missing.
+- weight  The weight of the feature ranges from 0 to 1 (e.g. how prevalent is the topic in the comment?).
+- weight will be initialized with 1 if missing.
 Items with multiple features should occur multiple times in the data table.
 Make sure not to include duplicates (that's where the weight kicks in, use it!).
 The feature and item columns can contain numeric IDs, character strings or factors.
