@@ -93,6 +93,8 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
   # Plot
   #
 
+  geom.text.size = 0.2 * base_size
+
   pl <- data %>%
 
     # Create labels
@@ -108,7 +110,7 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
 
     ggplot(aes(y=source,x=target,fill=value,group=source)) +
     geom_tile(color="lightgray")+
-    geom_text(aes(label=value_label))+ #,size=1.8
+    geom_text(aes(label=value_label),size = geom.text.size)+ #,size=1.8
 
     scale_fill_gradientn(
       colours = value.colors,
