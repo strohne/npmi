@@ -21,7 +21,7 @@ network <- function(data) {
   ) %>%
     distinct(id,.keep_all = T)
 
-  gr <- tbl_graph(nodes=nodes,edges=npmi.edges,directed=T)
+  gr <- tbl_graph(nodes=nodes,edges=edges,directed=T)
 
   gr <- gr %E>%
     filter(!edge_is_loop()) %N>%
