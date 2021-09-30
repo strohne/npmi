@@ -1,12 +1,12 @@
 # npmi
 Explore correlations and sequences in qualitative and quantitative content analysis
 
-*The package is in pre alpha state. Use it with care. Numbers might hurt.*
+*The package is in pre alpha state. Use with care. Numbers might be hurt.*
 
 # Installation
 ```
 library(devtools)
-install_github("strohne/npmi/npmi")
+install_github("strohne/npmi/npmi", build_vignettes = TRUE)
 ```
 
 # Usage
@@ -20,3 +20,4 @@ data_actual <- data %>%
   count_pairs()
 ```    
 
+See the vignettes for further examples (either browse the vignettes folder or open vignettes from the package help). Vignettes are not polished yet.
