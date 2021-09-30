@@ -1,6 +1,7 @@
 # npmi
 Explore correlations and sequences in qualitative and quantitative content analysis
 
+*The package is in pre alpha state. Use it with care. Numbers might hurt.*
 
 # Installation
 ```
