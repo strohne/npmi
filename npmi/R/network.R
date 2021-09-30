@@ -16,8 +16,8 @@ network <- function(data) {
     slice_max(weight,n=60)
 
   nodes <- bind_rows(
-    distinct(pairs_coo$pairs,id=source,label=source_label,no=source_no,group=source_group),
-    distinct(pairs_coo$pairs,id=target,label=target_label,no=target_no,group=target_group)
+    distinct(data,id=source,label=source_label,no=source_no,group=source_group),
+    distinct(data,id=target,label=target_label,no=target_no,group=target_group)
   ) %>%
     distinct(id,.keep_all = T)
 
