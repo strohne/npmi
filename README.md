@@ -62,3 +62,9 @@ pairs_seq %>%
 ```    
 
 See the vignettes for further examples (either browse the vignettes folder or open vignettes from the package help). Vignettes are not polished yet.
+
+Resampling can be parallelized, just call:
+```
+library(future)
+plan(multisession)
+```
