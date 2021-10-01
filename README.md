@@ -6,7 +6,7 @@ Explore correlations and sequences in qualitative and quantitative content analy
 # Installation
 ```
 library(devtools)
-install_github("strohne/npmi/npmi", build_vignettes = TRUE)
+install_github("strohne/npmi", build_vignettes = TRUE)
 ```
 
 # Usage
