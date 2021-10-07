@@ -83,3 +83,19 @@ pairs_resampled$pairs %>%
 
 
 ```
+
+
+```{r}
+
+# Extract the items that glue the features together
+
+
+
+glue <- pairs_resampled$pairs %>% 
+  filter(sig == T) %>%
+  select(source,target,n,p,p_cond,npmi) %>%
+  get_glue(threads)
+
+
+```
+
