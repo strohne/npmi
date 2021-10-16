@@ -68,3 +68,6 @@ Resampling can be parallelized, just call:
 library(future)
 plan(multisession)
 ```
+
+# Presentations
+Jünger, Jakob (2021). Unseen correlations: On the identification of rare events and sequences in online comment threads. Annual Conference of the Methods Division of the German Communication Association (DGPuK), 2021, Virtual Vienna.
