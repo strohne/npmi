@@ -35,7 +35,7 @@ pairs_seq <- data %>%
   count_sequences()
 
 # Resample npmi for sequences
-pairs_seq <- %>%
+pairs_seq <- data %>%
   rename(item=id,item_parent=parent_id) %>% 
   add_previous_item() %>% 
   get_sequences()
