@@ -88,7 +88,6 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
     mutate(source=factor(source,levels=y.features$source)) %>%
     mutate(target=factor(target,levels=x.features$target))
 
-
   #
   # Plot
   #
@@ -117,33 +116,48 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
       values = value.gradient,
       na.value = "white",
       limits=c(value.min,value.max),
-      name=caption) +
+      name=caption
+    )
 
+  x_group_axis <- waiver()
+  y_group_axis <- waiver()
+  x_axis_label <- "Target"
+  y_axis_label <- "Source"
+  if (length(x.groups.breaks) > 1) {
+    x_group_axis <- sec_axis(
+      transform= ~.,
+      breaks=x.groups.breaks,
+      labels=x.groups.label,
+      name="Target"
+    )
+    x_axis_label <- ""
+  }
+
+  if (length(y.groups.breaks) > 1) {
+    y_group_axis <- sec_axis(
+      transform= ~.,
+      breaks=y.groups.breaks,
+      labels=y.groups.label,
+      name="Source"
+    )
+    y_axis_label <- ""
+  }
+
+  pl <- pl +
     scale_x_reverse(
       breaks=c(1:length(x.features$target_label)),
       labels=x.features$target_label,
       position="top",
-      name="" ,
-      sec.axis=sec_axis(
-        trans= ~.,
-        breaks=x.groups.breaks,
-        labels=x.groups.label,
-        name="Target"
-      )
+      name=x_axis_label,
+      sec.axis=x_group_axis
     ) +
     scale_y_reverse(
       position="right",
       breaks=c(1:length(y.features$source_label)),
       labels=y.features$source_label,
-      name="",
-      sec.axis=sec_axis(
-        trans= ~.,
-        breaks=y.groups.breaks,
-        labels=y.groups.label,
-        name="Source"
-      )
+      name=y_axis_label,
+      sec.axis=y_group_axis
     ) +
-
 
     coord_fixed(expand=F) +
 
@@ -171,12 +185,12 @@ matrixmap <- function(data, caption = "", value.min=NULL,value.max=NULL, value.m
   # Add lines between groups
   for (y in y.groups) {
     pl <- pl +
-      geom_hline(yintercept = y,size=0.5)
+      geom_hline(yintercept = y,linewidth=0.5)
   }
 
   for (x in x.groups) {
     pl <- pl +
-      geom_vline(xintercept = x,size=0.5)
+      geom_vline(xintercept = x,linewidth=0.5)
   }
 
 
